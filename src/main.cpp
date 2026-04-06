@@ -4,8 +4,6 @@ int IN1, IN2, IN3, IN4;
 int led;
 
 
-
-
 void setup() {
   pinMode(led, OUTPUT);
   
@@ -16,10 +14,10 @@ void setup() {
 }
 
 void loop() {
-
   digitalWrite(IN1,HIGH);
-  digitalWrite(IN2,LOW);
-  
+  digitalWrite(IN2,LOW); 
 }
+
+
 
 
