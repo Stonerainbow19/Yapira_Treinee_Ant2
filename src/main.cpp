@@ -9,9 +9,7 @@
 
 const int IN1 = 4, IN2 = 5, IN3 = 6, IN4 = 7, WEAPON1 = 10, WEAPON2 = 8, ENC = 9, ENA = A2, ENB = A1, led = 13;
 int spdRightMotor, spdLeftMotor, spdWeapon;
-
-bool offWeapon;
-int led;
+bool offWeapon = true;
 
 
 void moveRobot(int spd1, int spd2){
@@ -97,8 +95,6 @@ void setup() {
   pinMode(WEAPON1, OUTPUT);
   pinMode(WEAPON2, OUTPUT);
   
-  // Variaveis da arma; 
-  offWeapon = true;
   spdWeapon = 255;
 
   Serial.begin(19200);
@@ -119,7 +115,7 @@ void loop() {
 
 
   // Modo - Joystick
-  if(x != 0 & y != 0) {
+  if((x != 0) && (y != 0)) {
       moveRobotJoystick(x,y);
   }
   // Modo - Dpad
