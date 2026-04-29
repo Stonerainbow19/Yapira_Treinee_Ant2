@@ -6,86 +6,77 @@
 #include <Dabble.h>
 
 // Definicao de pinos
-
-const int IN1 = 4, IN2 = 5, IN3 = 6, IN4 = 7, WEAPON1 = 10, WEAPON2 = 8, ENC = 9, ENA = A2, ENB = A1, led = 13;
-int spdRightMotor, spdLeftMotor, spdWeapon;
-bool offWeapon = true;
+const int IN1 = 4, IN2 = 5, IN3 = 6, IN4 = 7, WEAPON1 = 10, WEAPON2 = 8, ENC = 9, ENA = A2, ENB = A1;
+int spd,spdWeapon, coeficienteSpd = 1;
+bool onWeapon = true; 
+unsigned long lastPress = 0, lastPress1 = 0;
 
 
 void moveRobot(int spd1, int spd2){
-  // Move Forward
+  // Mova para frente
   if (spd1 > 0 && spd2 > 0){
     digitalWrite(IN1, HIGH);
     digitalWrite(IN2, LOW);
     digitalWrite(IN3, HIGH);
     digitalWrite(IN4, LOW);
-    analogWrite(ENA, spd1);
-    analogWrite(ENB, spd2);
   }
-  // Move Backward
+  // Mova para tras
   else if (spd1 < 0 && spd2 < 0){
     digitalWrite(IN1, LOW);
     digitalWrite(IN2, HIGH);
     digitalWrite(IN3, LOW);
     digitalWrite(IN4, HIGH);
-    analogWrite(ENA, -spd1);
-    analogWrite(ENB, -spd2);
+
   }
-  // Turn Right
+  // Curva direita
   else if (spd1 > 0 && spd2 < 0){
     digitalWrite(IN1, HIGH);
     digitalWrite(IN2, LOW);
     digitalWrite(IN3, LOW);
     digitalWrite(IN4, HIGH);
-    analogWrite(ENA, spd1);
-    analogWrite(ENB, -spd2);
+
   }
-  // Turn Left
+  // Curva esquerda
   else if (spd1 < 0 && spd2 > 0){
     digitalWrite(IN1, LOW);
     digitalWrite(IN2, HIGH);
     digitalWrite(IN3, HIGH);
     digitalWrite(IN4, LOW);
-    analogWrite(ENA, -spd1);
-    analogWrite(ENB, spd2);
+
   }
-  // Stop
+  // Pare
   else {
     digitalWrite(IN1, LOW);
     digitalWrite(IN2, LOW);
     digitalWrite(IN3, LOW);
     digitalWrite(IN4, LOW);
-    analogWrite(ENA, 0);
-    analogWrite(ENB, 0);
   }
+
+  analogWrite(ENA, abs(spd1));
+  analogWrite(ENB, abs(spd2));
 
 }
 
 void moveRobotJoystick(float x_axis, float y_axis){
   // Ajeitando o valor do x e y
-  x_axis = x_axis / 7;
-  y_axis = y_axis / 7;
+  x_axis = (int) x_axis;
+  y_axis = (int) y_axis;
 
-  int spd1 = (int)(y_axis * 255);
-  int spd2 = (int)(y_axis * 255);
+  
+  int forward = map(y_axis, -7, 7, -255, 255);
+  int turn = map(x_axis, -7,7,-255,255);
 
-  if (x_axis > 0) { 
-    spd1 -= (int)(x_axis * 255);
-    spd2 += (int)(x_axis * 255);
-  } else if (x_axis < 0) { 
-    spd1 += (int)(-x_axis * 255);
-    spd2 -= (int)(-x_axis * 255);
-  }
+  int spd1 =  forward + turn;
+  int spd2 = forward - turn;
+
 
   spd1 = constrain(spd1, -255, 255);
   spd2 = constrain(spd2, -255, 255);
 
-  moveRobot(spd1, spd2);
+  moveRobot(coeficienteSpd*spd1, coeficienteSpd*spd2);
 }
 
 void setup() {
-  
-  pinMode(led, OUTPUT);
   
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
@@ -115,63 +106,72 @@ void loop() {
 
 
   // Modo - Joystick
-  if((x != 0) && (y != 0)) {
+  if((x != 0) || (y != 0)) {
       moveRobotJoystick(x,y);
   }
   // Modo - Dpad
   else{
-    spdRightMotor = 255;
-    spdLeftMotor = 255;
+    spd = 255;
     if (GamePad.isUpPressed())
     {
       Serial.println("Up");
+      moveRobot(spd*coeficienteSpd,spd*coeficienteSpd);
     }
     else if (GamePad.isDownPressed())
     {
       Serial.print("Down");
-      spdRightMotor = -spdRightMotor;
-      spdLeftMotor = -spdLeftMotor;
+      moveRobot(-spd*coeficienteSpd,-spd*coeficienteSpd);
     }
     else if (GamePad.isLeftPressed())
     {
       Serial.print("Left");
-      spdLeftMotor = -spdLeftMotor;
+      moveRobot(-spd*coeficienteSpd, spd*coeficienteSpd);
     }
-
     else if (GamePad.isRightPressed())
     {
       Serial.print("Right");
-      spdRightMotor = -spdRightMotor;
+      moveRobot(spd * coeficienteSpd, -spd*coeficienteSpd);
     } else {
-       spdRightMotor = 0;
-       spdLeftMotor = 0;
+      moveRobot(0,0);
     }
-    moveRobot(spdLeftMotor,spdRightMotor);
 
   }
 
 
-  
   // Controle da arma
-  unsigned long lastPress = 0;
   if (GamePad.isCirclePressed())
   { 
     if(millis() - lastPress > 300){
-      offWeapon = !offWeapon;
+      onWeapon = !onWeapon;
       lastPress = millis();
-      Serial.print("Circle");
+      Serial.print("O");
     }
   }
 
-  if(offWeapon){
+  if(onWeapon){
     digitalWrite(WEAPON1, HIGH);
     digitalWrite(WEAPON2, LOW);
     analogWrite(ENC, spdWeapon);
   } else{
-    digitalWrite(WEAPON1, HIGH);
-    digitalWrite(WEAPON2, HIGH);
+    digitalWrite(WEAPON1, LOW);
+    digitalWrite(WEAPON2, LOW);
     analogWrite(ENC, 0); 
   }
+
+    
+  // Inverter movimento
+  if (GamePad.isCrossPressed())
+  { 
+    if(millis() - lastPress1 > 300){
+      coeficienteSpd *= -1;
+
+      lastPress1 = millis();
+      Serial.print("X");
+    }
+  }
+
+
+
 }
 
 
