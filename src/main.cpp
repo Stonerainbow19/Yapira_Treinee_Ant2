@@ -62,7 +62,7 @@ void moveRobotJoystick(float x_axis, float y_axis){
   x_axis = (int) x_axis;
   y_axis = (int) y_axis;
 
-  
+
   int forward = map(y_axis, -7, 7, -255, 255);
   int turn = map(x_axis, -7,7,-255,255);
 
@@ -169,8 +169,6 @@ void loop() {
       Serial.print("X");
     }
   }
-
-
 
 }
 
