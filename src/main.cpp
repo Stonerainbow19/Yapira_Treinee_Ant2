@@ -6,48 +6,32 @@
 #include <Dabble.h>
 
 // Definicao de pinos
-const int IN1 = 4, IN2 = 5, IN3 = 6, IN4 = 7, WEAPON1 = 10, WEAPON2 = 8, ENC = 9, ENA = A2, ENB = A1;
-int spd,spdWeapon, coeficienteSpd = 1;
-bool onWeapon = true; 
+const int IN1 = 4, IN2 = 5, IN3 = 6, IN4 = 7, WEAPON1 = 12, WEAPON2 = 8, ENC = 9, ENA = 11, ENB = 10;
+int speed,spdWeapon, coeficienteSpd = 1;
+bool onWeapon = false, WEAPON1_DIR = LOW, WEAPON2_DIR = HIGH; 
 unsigned long lastPress = 0, lastPress1 = 0;
 
 
 void moveRobot(int spd1, int spd2){
-  // Mova para frente
-  if (spd1 > 0 && spd2 > 0){
+
+  if (spd1 > 0) {
     digitalWrite(IN1, HIGH);
     digitalWrite(IN2, LOW);
-    digitalWrite(IN3, HIGH);
-    digitalWrite(IN4, LOW);
-  }
-  // Mova para tras
-  else if (spd1 < 0 && spd2 < 0){
+  } else if (spd1 < 0) {
     digitalWrite(IN1, LOW);
     digitalWrite(IN2, HIGH);
-    digitalWrite(IN3, LOW);
-    digitalWrite(IN4, HIGH);
-
-  }
-  // Curva direita
-  else if (spd1 > 0 && spd2 < 0){
-    digitalWrite(IN1, HIGH);
-    digitalWrite(IN2, LOW);
-    digitalWrite(IN3, LOW);
-    digitalWrite(IN4, HIGH);
-
-  }
-  // Curva esquerda
-  else if (spd1 < 0 && spd2 > 0){
+  } else {
     digitalWrite(IN1, LOW);
-    digitalWrite(IN2, HIGH);
+    digitalWrite(IN2, LOW);
+  }
+
+  if (spd2 > 0) {
     digitalWrite(IN3, HIGH);
     digitalWrite(IN4, LOW);
-
-  }
-  // Pare
-  else {
-    digitalWrite(IN1, LOW);
-    digitalWrite(IN2, LOW);
+  } else if (spd2 < 0) {
+    digitalWrite(IN3, LOW);
+    digitalWrite(IN4, HIGH);
+  } else {
     digitalWrite(IN3, LOW);
     digitalWrite(IN4, LOW);
   }
@@ -58,22 +42,18 @@ void moveRobot(int spd1, int spd2){
 }
 
 void moveRobotJoystick(float x_axis, float y_axis){
-  // Ajeitando o valor do x e y
-  x_axis = (int) x_axis;
-  y_axis = (int) y_axis;
 
-
-  int forward = map(y_axis, -7, 7, -255, 255);
-  int turn = map(x_axis, -7,7,-255,255);
+  int forward = (int) map(y_axis, -7, 7, -255, 255);
+  int turn = (int) map(x_axis, -7,7,-255,255);
 
   int spd1 =  forward + turn;
   int spd2 = forward - turn;
 
 
-  spd1 = constrain(spd1, -255, 255);
-  spd2 = constrain(spd2, -255, 255);
+  spd1 = constrain(spd1, -255, 255) * coeficienteSpd;
+  spd2 = constrain(spd2, -255, 255) * coeficienteSpd;
 
-  moveRobot(coeficienteSpd*spd1, coeficienteSpd*spd2);
+  moveRobot(spd1, spd2);
 }
 
 void setup() {
@@ -86,7 +66,7 @@ void setup() {
   pinMode(WEAPON1, OUTPUT);
   pinMode(WEAPON2, OUTPUT);
   
-  spdWeapon = 255;
+  spdWeapon = 200;
 
   Serial.begin(19200);
   Dabble.begin(9600);
@@ -111,46 +91,54 @@ void loop() {
   }
   // Modo - Dpad
   else{
-    spd = 255;
+    speed = 255 * coeficienteSpd;
     if (GamePad.isUpPressed())
     {
       Serial.println("Up");
-      moveRobot(spd*coeficienteSpd,spd*coeficienteSpd);
+      moveRobot(speed, speed);
     }
     else if (GamePad.isDownPressed())
     {
       Serial.print("Down");
-      moveRobot(-spd*coeficienteSpd,-spd*coeficienteSpd);
+      moveRobot(-speed, -speed);
     }
     else if (GamePad.isLeftPressed())
-    {
-      Serial.print("Left");
-      moveRobot(-spd*coeficienteSpd, spd*coeficienteSpd);
+    { 
+      moveRobot(-speed, speed);
     }
     else if (GamePad.isRightPressed())
     {
-      Serial.print("Right");
-      moveRobot(spd * coeficienteSpd, -spd*coeficienteSpd);
+      moveRobot(speed,-speed);
+
     } else {
       moveRobot(0,0);
     }
 
   }
 
+  // Inverter movimento
+  if (GamePad.isCrossPressed())
+  { 
+    if(millis() - lastPress1 > 300){
+      coeficienteSpd *= -1;
+      WEAPON1_DIR = !WEAPON1_DIR;
+      WEAPON2_DIR = !WEAPON2_DIR;
+      lastPress1 = millis();
+    }
+  }
 
   // Controle da arma
-  if (GamePad.isCirclePressed())
+  if (GamePad.isTrianglePressed())
   { 
     if(millis() - lastPress > 300){
       onWeapon = !onWeapon;
       lastPress = millis();
-      Serial.print("O");
     }
   }
 
   if(onWeapon){
-    digitalWrite(WEAPON1, HIGH);
-    digitalWrite(WEAPON2, LOW);
+    digitalWrite(WEAPON1, WEAPON1_DIR);
+    digitalWrite(WEAPON2, WEAPON2_DIR);
     analogWrite(ENC, spdWeapon);
   } else{
     digitalWrite(WEAPON1, LOW);
@@ -159,17 +147,6 @@ void loop() {
   }
 
     
-  // Inverter movimento
-  if (GamePad.isCrossPressed())
-  { 
-    if(millis() - lastPress1 > 300){
-      coeficienteSpd *= -1;
-
-      lastPress1 = millis();
-      Serial.print("X");
-    }
-  }
-
 }
 
 
